@@ -33,6 +33,11 @@ func DockerCli(t *testing.T) dockercli.CommonAPIClient {
 	return dockerCliVal
 }
 
+func AllowNonDistributable(t *testing.T, registry string) {
+	t.Helper()
+	fmt.Println(Run(t, exec.Command("dockerd", "--allow-nondistributable-artifacts", registry)))
+}
+
 func DockerBuild(t *testing.T, name, context string, ops ...DockerCmdOp) {
 	t.Helper()
 	args := formatArgs([]string{"-t", name, context}, ops...)
@@ -103,6 +108,7 @@ func DockerVolumeExists(t *testing.T, volumeName string) bool {
 
 // FIXME: re-work this function to exec the docker cli, or convert other docker helpers to using the client library.
 func PushImage(dockerCli dockercli.CommonAPIClient, ref string, auth string) error {
+
 	rc, err := dockerCli.ImagePush(context.Background(), ref, dockertypes.ImagePushOptions{RegistryAuth: auth})
 	if err != nil {
 		return errors.Wrap(err, "pushing image")
