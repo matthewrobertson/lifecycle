@@ -14,6 +14,7 @@ import (
 	"github.com/buildpacks/lifecycle/internal/layer"
 	"github.com/buildpacks/lifecycle/log"
 	"github.com/buildpacks/lifecycle/platform"
+	"github.com/google/go-containerregistry/pkg/v1/validate"
 )
 
 type AnalyzerFactory struct {
@@ -299,7 +300,11 @@ func (a *Analyzer) retrieveAppMetadata() (platform.LayersMetadata, string, error
 	if !a.PreviousImage.Valid() {
 		if a.PreviousImage.Found() {
 			im := a.PreviousImage.(*remote.Image)
-
+			err := validate.Image(im.UnderlyingImage(), validate.Fast)
+			if err != nil {
+				a.Logger.Infof("%v", err)
+				return platform.LayersMetadata{}, "", err
+			}
 			m, _ := im.UnderlyingImage().Manifest()
 			if err != nil {
 				return platform.LayersMetadata{}, "", err
