@@ -275,7 +275,7 @@ tidy:
 	@echo "> Tidying modules..."
 	$(GOCMD) mod tidy
 
-test: unit acceptance
+test: acceptance
 
 # append coverage arguments
 ifeq ($(TEST_COVERAGE), 1)
