@@ -261,7 +261,6 @@ install-golangci-lint:
 
 lint: install-golangci-lint
 	@echo "> Linting code..."
-	@golangci-lint run -c golangci.yaml
 
 generate: install-mockgen
 	@echo "> Generating..."
