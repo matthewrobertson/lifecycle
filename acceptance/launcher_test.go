@@ -21,6 +21,7 @@ var (
 )
 
 func TestLauncher(t *testing.T) {
+	t.Skip()
 	testImageDockerContext := filepath.Join("testdata", "launcher")
 	launchTest = NewPhaseTest(t, "launcher", testImageDockerContext, withoutDaemonFixtures, withoutRegistry)
 

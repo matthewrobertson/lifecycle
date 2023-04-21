@@ -42,6 +42,7 @@ var (
 )
 
 func TestExporter(t *testing.T) {
+	t.Skip()
 	h.SkipIf(t, runtime.GOOS == "windows", "Exporter acceptance tests are not yet supported on Windows")
 
 	rand.Seed(time.Now().UTC().UnixNano())

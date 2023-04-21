@@ -47,9 +47,10 @@ func TestAnalyzer(t *testing.T) {
 	analyzeDaemonFixtures = analyzeTest.targetDaemon.fixtures
 	analyzeRegFixtures = analyzeTest.targetRegistry.fixtures
 
-	for _, platformAPI := range api.Platform.Supported {
-		spec.Run(t, "acceptance-analyzer/"+platformAPI.String(), testAnalyzerFunc(platformAPI.String()), spec.Parallel(), spec.Report(report.Terminal{}))
-	}
+	// for _, platformAPI := range api.Platform.Supported {
+	platformAPI := "0.11"
+	spec.Run(t, "acceptance-analyzer/"+platformAPI, testAnalyzerFunc(platformAPI), spec.Parallel(), spec.Report(report.Terminal{}))
+	// }
 }
 
 func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spec.S) {

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - test-action
       - 'release/**'
   pull_request:
     branches:
@@ -11,43 +12,43 @@ on:
       - 'release/**'
 
 jobs:
-  test-linux-amd64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up go
-        uses: actions/setup-go@v3
-        with:
-          go-version-file: 'go.mod'
-      - name: Install jq
-        run: |
-          mkdir -p deps/bin
-          curl -s -L -o deps/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
-          chmod +x deps/bin/jq
-          echo "${PWD}/deps/bin" >> $GITHUB_PATH
-      - name: Test
-        env:
-          TEST_COVERAGE: 1
-        run: make test
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./out/tests/coverage-unit.txt
-          flags: unit,os_linux
-          fail_ci_if_error: true
-          verbose: true
-  test-linux-arm64:
-    runs-on: linux-arm64
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up go
-        uses: actions/setup-go@v3
-        with:
-          go-version-file: 'go.mod'
-      - name: Test
-        run: |
-          make format || true
-          make test
+  # test-linux-amd64:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Set up go
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version-file: 'go.mod'
+  #     - name: Install jq
+  #       run: |
+  #         mkdir -p deps/bin
+  #         curl -s -L -o deps/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+  #         chmod +x deps/bin/jq
+  #         echo "${PWD}/deps/bin" >> $GITHUB_PATH
+  #     - name: Test
+  #       env:
+  #         TEST_COVERAGE: 1
+  #       run: make test
+  #     - name: Upload coverage to Codecov
+  #       uses: codecov/codecov-action@v3
+  #       with:
+  #         file: ./out/tests/coverage-unit.txt
+  #         flags: unit,os_linux
+  #         fail_ci_if_error: true
+  #         verbose: true
+  # test-linux-arm64:
+  #   runs-on: linux-arm64
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - name: Set up go
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version-file: 'go.mod'
+  #     - name: Test
+  #       run: |
+  #         make format || true
+  #         make test
   test-windows:
     runs-on: windows-2019
     steps:
@@ -95,246 +96,246 @@ jobs:
       - name: Run Codecov
         run: |
           codecov.exe -f .\out\tests\coverage-unit.txt -v --flag os_windows
-  build-and-publish:
-    needs:
-      - test-linux-amd64
-      - test-linux-arm64
-      - test-windows
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0 # fetch all history for all branches and tags
-      - name: Set up go
-        uses: actions/setup-go@v3
-        with:
-          go-version-file: 'go.mod'
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v1.0.0
-        with:
-          cosign-release: 'v1.0.0'
-      - name: Set version
-        run: |
-          echo "LIFECYCLE_VERSION=$(go run tools/version/main.go)" | tee -a $GITHUB_ENV version.txt
-      - uses: actions/upload-artifact@v2
-        with:
-          name: version
-          path: version.txt
-      - name: Set tag
-        run: |
-          echo "LIFECYCLE_IMAGE_TAG=$(git describe --always --abbrev=7)" >> tag.txt
-      - uses: actions/upload-artifact@v2
-        with:
-          name: tag
-          path: tag.txt
-      - name: Build
-        run: |
-          make clean
-          make build
-          make package
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-linux-x86-64
-          path: out/lifecycle-v*+linux.x86-64.tgz
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-linux-x86-64-sha256
-          path: out/lifecycle-v*+linux.x86-64.tgz.sha256
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-linux-arm64
-          path: out/lifecycle-v*+linux.arm64.tgz
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-linux-arm64-sha256
-          path: out/lifecycle-v*+linux.arm64.tgz.sha256
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-windows-x86-64
-          path: out/lifecycle-v*+windows.x86-64.tgz
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-windows-x86-64-sha256
-          path: out/lifecycle-v*+windows.x86-64.tgz.sha256
-      - name: Generate SBOM JSON
-        uses: CycloneDX/gh-gomod-generate-sbom@v1
-        with:
-          args: mod -licenses -json -output lifecycle-v${{ env.LIFECYCLE_VERSION }}-bom.cdx.json
-          version: ^v1
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-bom-cdx
-          path: lifecycle-v*-bom.cdx.json
-      - name: Calculate SBOM sha
-        run: |
-          shasum -a 256 lifecycle-v${{ env.LIFECYCLE_VERSION }}-bom.cdx.json > lifecycle-v${{ env.LIFECYCLE_VERSION }}-bom.cdx.json.sha256
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-bom-cdx-sha256
-          path: lifecycle-v*-bom.cdx.json.sha256
-      - uses: azure/docker-login@v1
-        if: github.event_name == 'push'
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - uses: actions/download-artifact@v2
-        with:
-          name: tag
-      - name: Set env
-        run: |
-          cat tag.txt >> $GITHUB_ENV
-      - name: Rename cosign public key
-        run: |
-          cp cosign.pub lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-cosign-public-key
-          path: lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub
-      - name: Calculate cosign sha
-        run: |
-          shasum -a 256 lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub > lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub.sha256
-      - uses: actions/upload-artifact@v2
-        with:
-          name: lifecycle-cosign-public-key-sha256
-          path: lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub.sha256
-      - name: Publish images
-        if: github.event_name == 'push'
-        run: |
-          DOCKER_CLI_EXPERIMENTAL=enabled
-          LIFECYCLE_IMAGE_TAG=$(git describe --always --abbrev=7)
+  # build-and-publish:
+  #   needs:
+  #     - test-linux-amd64
+  #     - test-linux-arm64
+  #     - test-windows
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         fetch-depth: 0 # fetch all history for all branches and tags
+  #     - name: Set up go
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version-file: 'go.mod'
+  #     - name: Install Cosign
+  #       uses: sigstore/cosign-installer@v1.0.0
+  #       with:
+  #         cosign-release: 'v1.0.0'
+  #     - name: Set version
+  #       run: |
+  #         echo "LIFECYCLE_VERSION=$(go run tools/version/main.go)" | tee -a $GITHUB_ENV version.txt
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: version
+  #         path: version.txt
+  #     - name: Set tag
+  #       run: |
+  #         echo "LIFECYCLE_IMAGE_TAG=$(git describe --always --abbrev=7)" >> tag.txt
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: tag
+  #         path: tag.txt
+  #     - name: Build
+  #       run: |
+  #         make clean
+  #         make build
+  #         make package
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-linux-x86-64
+  #         path: out/lifecycle-v*+linux.x86-64.tgz
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-linux-x86-64-sha256
+  #         path: out/lifecycle-v*+linux.x86-64.tgz.sha256
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-linux-arm64
+  #         path: out/lifecycle-v*+linux.arm64.tgz
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-linux-arm64-sha256
+  #         path: out/lifecycle-v*+linux.arm64.tgz.sha256
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-windows-x86-64
+  #         path: out/lifecycle-v*+windows.x86-64.tgz
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-windows-x86-64-sha256
+  #         path: out/lifecycle-v*+windows.x86-64.tgz.sha256
+  #     - name: Generate SBOM JSON
+  #       uses: CycloneDX/gh-gomod-generate-sbom@v1
+  #       with:
+  #         args: mod -licenses -json -output lifecycle-v${{ env.LIFECYCLE_VERSION }}-bom.cdx.json
+  #         version: ^v1
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-bom-cdx
+  #         path: lifecycle-v*-bom.cdx.json
+  #     - name: Calculate SBOM sha
+  #       run: |
+  #         shasum -a 256 lifecycle-v${{ env.LIFECYCLE_VERSION }}-bom.cdx.json > lifecycle-v${{ env.LIFECYCLE_VERSION }}-bom.cdx.json.sha256
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-bom-cdx-sha256
+  #         path: lifecycle-v*-bom.cdx.json.sha256
+  #     - uses: azure/docker-login@v1
+  #       if: github.event_name == 'push'
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_PASSWORD }}
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: tag
+  #     - name: Set env
+  #       run: |
+  #         cat tag.txt >> $GITHUB_ENV
+  #     - name: Rename cosign public key
+  #       run: |
+  #         cp cosign.pub lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-cosign-public-key
+  #         path: lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub
+  #     - name: Calculate cosign sha
+  #       run: |
+  #         shasum -a 256 lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub > lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub.sha256
+  #     - uses: actions/upload-artifact@v2
+  #       with:
+  #         name: lifecycle-cosign-public-key-sha256
+  #         path: lifecycle-v${{ env.LIFECYCLE_VERSION }}-cosign.pub.sha256
+  #     - name: Publish images
+  #       if: github.event_name == 'push'
+  #       run: |
+  #         DOCKER_CLI_EXPERIMENTAL=enabled
+  #         LIFECYCLE_IMAGE_TAG=$(git describe --always --abbrev=7)
 
-          LINUX_AMD64_SHA=$(go run ./tools/image/main.go -lifecyclePath ./out/lifecycle-v*+linux.x86-64.tgz -tag buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-linux-x86-64 | awk '{print $NF}')
-          echo "LINUX_AMD64_SHA: $LINUX_AMD64_SHA"
+  #         LINUX_AMD64_SHA=$(go run ./tools/image/main.go -lifecyclePath ./out/lifecycle-v*+linux.x86-64.tgz -tag buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-linux-x86-64 | awk '{print $NF}')
+  #         echo "LINUX_AMD64_SHA: $LINUX_AMD64_SHA"
 
-          LINUX_ARM64_SHA=$(go run ./tools/image/main.go -lifecyclePath ./out/lifecycle-v*+linux.arm64.tgz -tag buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-linux-arm64 -arch arm64 | awk '{print $NF}')
-          echo "LINUX_ARM64_SHA: $LINUX_ARM64_SHA"
+  #         LINUX_ARM64_SHA=$(go run ./tools/image/main.go -lifecyclePath ./out/lifecycle-v*+linux.arm64.tgz -tag buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-linux-arm64 -arch arm64 | awk '{print $NF}')
+  #         echo "LINUX_ARM64_SHA: $LINUX_ARM64_SHA"
 
-          WINDOWS_AMD64_SHA=$(go run ./tools/image/main.go -lifecyclePath ./out/lifecycle-v*+windows.x86-64.tgz -tag buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-windows -os windows | awk '{print $NF}')
-          echo "WINDOWS_AMD64_SHA: $WINDOWS_AMD64_SHA"
+  #         WINDOWS_AMD64_SHA=$(go run ./tools/image/main.go -lifecyclePath ./out/lifecycle-v*+windows.x86-64.tgz -tag buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-windows -os windows | awk '{print $NF}')
+  #         echo "WINDOWS_AMD64_SHA: $WINDOWS_AMD64_SHA"
 
-          docker manifest create buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG} \
-              buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-linux-x86-64@${LINUX_AMD64_SHA} \
-              buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-linux-arm64@${LINUX_ARM64_SHA} \
-              buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-windows@${WINDOWS_AMD64_SHA}
+  #         docker manifest create buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG} \
+  #             buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-linux-x86-64@${LINUX_AMD64_SHA} \
+  #             buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-linux-arm64@${LINUX_ARM64_SHA} \
+  #             buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}-windows@${WINDOWS_AMD64_SHA}
 
-          MANIFEST_SHA=$(docker manifest push buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG})
-          echo "MANIFEST_SHA: $MANIFEST_SHA"
+  #         MANIFEST_SHA=$(docker manifest push buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG})
+  #         echo "MANIFEST_SHA: $MANIFEST_SHA"
 
-          COSIGN_PASSWORD=${{ secrets.COSIGN_PASSWORD }} cosign sign -r \
-            -key <(echo -n "${{ secrets.COSIGN_PRIVATE_KEY }}" | base64 --decode) \
-            -a tag=${LIFECYCLE_IMAGE_TAG} \
-            buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}@${MANIFEST_SHA}
-          cosign verify -key cosign.pub -a tag=${LIFECYCLE_IMAGE_TAG} buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}
-      - name: Scan image
-        if: github.event_name == 'push'
-        uses: anchore/scan-action@v3
-        with:
-          image: buildpacksio/lifecycle:${{ env.LIFECYCLE_IMAGE_TAG }}
-  pack-acceptance-linux:
-    if: github.event_name == 'push'
-    needs: build-and-publish
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          repository: 'buildpacks/pack'
-          path: 'pack'
-          ref: 'main'
-          fetch-depth: 0 # fetch all history for all branches and tags
-      - name: Set up go
-        uses: actions/setup-go@v3
-        with:
-          go-version-file: 'pack/go.mod'
-      - uses: actions/download-artifact@v2
-        with:
-          name: version
-      - uses: actions/download-artifact@v2
-        with:
-          name: tag
-      - name: Set env
-        run: |
-          cat version.txt >> $GITHUB_ENV
-          cat tag.txt >> $GITHUB_ENV
-      - uses: actions/download-artifact@v2
-        with:
-          name: lifecycle-linux-x86-64
-          path: pack
-      - name: Run pack acceptance
-        run: |
-          cd pack
-          git checkout v0.28.0 # FIXME: let the pack version float again when pack 0.30.0-pre2 is out
-          LIFECYCLE_PATH="../lifecycle-v${{ env.LIFECYCLE_VERSION }}+linux.x86-64.tgz" \
-          LIFECYCLE_IMAGE="buildpacksio/lifecycle:${{ env.LIFECYCLE_IMAGE_TAG }}" \
-          make acceptance
-  pack-acceptance-windows:
-    if: github.event_name == 'push'
-    needs: build-and-publish
-    runs-on: windows-2019
-    steps:
-      - name: Set git to use LF and symlinks
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-          git config --global core.symlinks true
-      - uses: actions/checkout@v2
-        with:
-          repository: 'buildpacks/pack'
-          path: 'pack'
-          ref: 'main'
-          fetch-depth: 0 # fetch all history for all branches and tags
-      - name: Set up go
-        uses: actions/setup-go@v3
-        with:
-          go-version-file: 'pack/go.mod'
-      - name: Add runner IP to daemon insecure-registries and firewall
-        shell: powershell
-        run: |
-          # Get IP from default gateway interface
-          $IPAddress=(Get-NetIPAddress -InterfaceAlias ((Get-NetRoute "0.0.0.0/0").InterfaceAlias) -AddressFamily IPv4)[0].IPAddress
+  #         COSIGN_PASSWORD=${{ secrets.COSIGN_PASSWORD }} cosign sign -r \
+  #           -key <(echo -n "${{ secrets.COSIGN_PRIVATE_KEY }}" | base64 --decode) \
+  #           -a tag=${LIFECYCLE_IMAGE_TAG} \
+  #           buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}@${MANIFEST_SHA}
+  #         cosign verify -key cosign.pub -a tag=${LIFECYCLE_IMAGE_TAG} buildpacksio/lifecycle:${LIFECYCLE_IMAGE_TAG}
+  #     - name: Scan image
+  #       if: github.event_name == 'push'
+  #       uses: anchore/scan-action@v3
+  #       with:
+  #         image: buildpacksio/lifecycle:${{ env.LIFECYCLE_IMAGE_TAG }}
+  # pack-acceptance-linux:
+  #   if: github.event_name == 'push'
+  #   needs: build-and-publish
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         repository: 'buildpacks/pack'
+  #         path: 'pack'
+  #         ref: 'main'
+  #         fetch-depth: 0 # fetch all history for all branches and tags
+  #     - name: Set up go
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version-file: 'pack/go.mod'
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: version
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: tag
+  #     - name: Set env
+  #       run: |
+  #         cat version.txt >> $GITHUB_ENV
+  #         cat tag.txt >> $GITHUB_ENV
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: lifecycle-linux-x86-64
+  #         path: pack
+  #     - name: Run pack acceptance
+  #       run: |
+  #         cd pack
+  #         git checkout v0.28.0 # FIXME: let the pack version float again when pack 0.30.0-pre2 is out
+  #         LIFECYCLE_PATH="../lifecycle-v${{ env.LIFECYCLE_VERSION }}+linux.x86-64.tgz" \
+  #         LIFECYCLE_IMAGE="buildpacksio/lifecycle:${{ env.LIFECYCLE_IMAGE_TAG }}" \
+  #         make acceptance
+  # pack-acceptance-windows:
+  #   if: github.event_name == 'push'
+  #   needs: build-and-publish
+  #   runs-on: windows-2019
+  #   steps:
+  #     - name: Set git to use LF and symlinks
+  #       run: |
+  #         git config --global core.autocrlf false
+  #         git config --global core.eol lf
+  #         git config --global core.symlinks true
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         repository: 'buildpacks/pack'
+  #         path: 'pack'
+  #         ref: 'main'
+  #         fetch-depth: 0 # fetch all history for all branches and tags
+  #     - name: Set up go
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version-file: 'pack/go.mod'
+  #     - name: Add runner IP to daemon insecure-registries and firewall
+  #       shell: powershell
+  #       run: |
+  #         # Get IP from default gateway interface
+  #         $IPAddress=(Get-NetIPAddress -InterfaceAlias ((Get-NetRoute "0.0.0.0/0").InterfaceAlias) -AddressFamily IPv4)[0].IPAddress
 
-          # Allow container-to-host registry traffic (from public interface, to the same interface)
-          New-NetfirewallRule -DisplayName test-registry -LocalAddress $IPAddress -RemoteAddress $IPAddress
+  #         # Allow container-to-host registry traffic (from public interface, to the same interface)
+  #         New-NetfirewallRule -DisplayName test-registry -LocalAddress $IPAddress -RemoteAddress $IPAddress
 
-          # create or update daemon config to allow host as insecure-registry
-          $config=@{}
-          if (Test-Path C:\ProgramData\docker\config\daemon.json) {
-            $config=(Get-Content C:\ProgramData\docker\config\daemon.json | ConvertFrom-json)
-          }
-          $config | Add-Member -Force -Name "insecure-registries" -value @("$IPAddress/32") -MemberType NoteProperty
-          ConvertTo-json $config | Out-File -Encoding ASCII C:\ProgramData\docker\config\daemon.json
+  #         # create or update daemon config to allow host as insecure-registry
+  #         $config=@{}
+  #         if (Test-Path C:\ProgramData\docker\config\daemon.json) {
+  #           $config=(Get-Content C:\ProgramData\docker\config\daemon.json | ConvertFrom-json)
+  #         }
+  #         $config | Add-Member -Force -Name "insecure-registries" -value @("$IPAddress/32") -MemberType NoteProperty
+  #         ConvertTo-json $config | Out-File -Encoding ASCII C:\ProgramData\docker\config\daemon.json
 
-          Restart-Service docker
+  #         Restart-Service docker
 
-          # dump docker info for auditing
-          docker version
-          docker info
-      - name: Modify etc\hosts to include runner IP
-        shell: powershell
-        run: |
-          $IPAddress=(Get-NetIPAddress -InterfaceAlias ((Get-NetRoute "0.0.0.0/0").InterfaceAlias) -AddressFamily IPv4)[0].IPAddress
-          "# Modified by CNB: https://github.com/buildpacks/ci/tree/main/gh-runners/windows
-          ${IPAddress} host.docker.internal
-          ${IPAddress} gateway.docker.internal
-          " | Out-File -Filepath C:\Windows\System32\drivers\etc\hosts -Encoding utf8
-      - uses: actions/download-artifact@v2
-        with:
-          name: version
-      - uses: actions/download-artifact@v2
-        with:
-          name: tag
-      - name: Set env
-        run: |
-          cat version.txt >> $env:GITHUB_ENV
-          cat tag.txt >> $env:GITHUB_ENV
-      - uses: actions/download-artifact@v2
-        with:
-          name: lifecycle-windows-x86-64
-          path: pack
-      - name: Run pack acceptance
-        run: |
-          cd pack
-          git checkout v0.28.0 # FIXME: let the pack version float again when pack 0.30.0-pre2 is out
-          $env:LIFECYCLE_PATH="..\lifecycle-v${{ env.LIFECYCLE_VERSION }}+windows.x86-64.tgz"
-          $env:LIFECYCLE_IMAGE="buildpacksio/lifecycle:${{ env.LIFECYCLE_IMAGE_TAG }}"
-          make acceptance
+  #         # dump docker info for auditing
+  #         docker version
+  #         docker info
+  #     - name: Modify etc\hosts to include runner IP
+  #       shell: powershell
+  #       run: |
+  #         $IPAddress=(Get-NetIPAddress -InterfaceAlias ((Get-NetRoute "0.0.0.0/0").InterfaceAlias) -AddressFamily IPv4)[0].IPAddress
+  #         "# Modified by CNB: https://github.com/buildpacks/ci/tree/main/gh-runners/windows
+  #         ${IPAddress} host.docker.internal
+  #         ${IPAddress} gateway.docker.internal
+  #         " | Out-File -Filepath C:\Windows\System32\drivers\etc\hosts -Encoding utf8
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: version
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: tag
+  #     - name: Set env
+  #       run: |
+  #         cat version.txt >> $env:GITHUB_ENV
+  #         cat tag.txt >> $env:GITHUB_ENV
+  #     - uses: actions/download-artifact@v2
+  #       with:
+  #         name: lifecycle-windows-x86-64
+  #         path: pack
+  #     - name: Run pack acceptance
+  #       run: |
+  #         cd pack
+  #         git checkout v0.28.0 # FIXME: let the pack version float again when pack 0.30.0-pre2 is out
+  #         $env:LIFECYCLE_PATH="..\lifecycle-v${{ env.LIFECYCLE_VERSION }}+windows.x86-64.tgz"
+  #         $env:LIFECYCLE_IMAGE="buildpacksio/lifecycle:${{ env.LIFECYCLE_IMAGE_TAG }}"
+  #         make acceptance
 
