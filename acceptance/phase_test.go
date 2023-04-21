@@ -229,7 +229,7 @@ func (r *targetRegistry) createFixtures(t *testing.T) {
 	fixtures.InaccessibleImage = r.registry.SetInaccessible("inaccessible-image")
 
 	someReadOnlyAppName := "some-read-only-app-image-" + h.RandString(10)
-	h.AllowNonDistributable(t, fmt.Sprintf("%s:%s", r.registry.Host, r.registry.Port))
+	// h.AllowNonDistributable(t, fmt.Sprintf("%s:%s", r.registry.Host, r.registry.Port))
 	// Run(r.registry.Host r.registry.Port
 	fixtures.ReadOnlyAppImage = buildRegistryImage(
 		t,
