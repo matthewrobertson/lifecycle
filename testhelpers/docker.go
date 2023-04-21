@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -149,6 +150,7 @@ func checkResponse(responseBody io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "reading body")
 	}
+	fmt.Println(string(body))
 
 	messages := strings.Builder{}
 	for _, line := range bytes.Split(body, []byte("\n")) {

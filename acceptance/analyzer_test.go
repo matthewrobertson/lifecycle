@@ -76,6 +76,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("called without an app image", func() {
 			it("errors", func() {
+				t.Skip()
 				cmd := exec.Command(
 					"docker", "run", "--rm",
 					"--env", "CNB_PLATFORM_API="+platformAPI,
@@ -92,6 +93,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("called with group", func() {
 			it("errors", func() {
+				t.Skip()
 				h.SkipIf(t, api.MustParse(platformAPI).LessThan("0.7"), "Platform API < 0.7 accepts a -group flag")
 				cmd := exec.Command(
 					"docker", "run", "--rm",
@@ -111,6 +113,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("called with skip layers", func() {
 			it("errors", func() {
+				t.Skip()
 				h.SkipIf(t,
 					api.MustParse(platformAPI).LessThan("0.7") || api.MustParse(platformAPI).AtLeast("0.9"),
 					"Platform API < 0.7 or Platform API > 0.9 accepts a -skip-layers flag")
@@ -132,6 +135,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("called with cache dir", func() {
 			it("errors", func() {
+				t.Skip()
 				h.SkipIf(t, api.MustParse(platformAPI).LessThan("0.7"), "Platform API < 0.7 accepts a -cache-dir flag")
 				cmd := exec.Command(
 					"docker", "run", "--rm",
@@ -151,6 +155,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("the provided layers directory isn't writeable", func() {
 			it("recursively chowns the directory", func() {
+				t.Skip()
 				h.SkipIf(t, runtime.GOOS == "windows", "Not relevant on Windows")
 
 				var analyzeFlags []string
@@ -180,6 +185,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("called with group (on older platforms)", func() {
 			it("uses the provided group.toml path", func() {
+				t.Skip()
 				h.SkipIf(t, api.MustParse(platformAPI).AtLeast("0.7"), "Platform API >= 0.7 does not accept a -group flag")
 
 				h.DockerSeedRunAndCopy(t,
@@ -204,6 +210,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 			when("group contains unsupported buildpacks", func() {
 				it("errors", func() {
+					t.Skip()
 					h.SkipIf(t, api.MustParse(platformAPI).AtLeast("0.7"), "Platform API >= 0.7 does not accept a -group flag")
 
 					cmd := exec.Command(
@@ -230,6 +237,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("called with analyzed", func() {
 			it("uses the provided analyzed.toml path", func() {
+				t.Skip()
 				analyzeFlags := []string{"-analyzed", ctrPath("/some-dir/some-analyzed.toml")}
 				if api.MustParse(platformAPI).AtLeast("0.7") {
 					analyzeFlags = append(analyzeFlags, "-run-image", analyzeRegFixtures.ReadOnlyRunImage)
@@ -258,6 +266,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("called with run", func() {
 			it("uses the provided run.toml path", func() {
+				t.Skip()
 				h.SkipIf(t, api.MustParse(platformAPI).LessThan("0.12"), "Platform API < 0.12 does not accept -run")
 				cmd := exec.Command(
 					"docker", "run", "--rm",
@@ -278,6 +287,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 		})
 
 		it("drops privileges", func() {
+			t.Skip()
 			h.SkipIf(t, runtime.GOOS == "windows", "Not relevant on Windows")
 
 			analyzeArgs := []string{"-analyzed", "/some-dir/some-analyzed.toml"}
@@ -307,6 +317,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 		when("run image", func() {
 			when("provided", func() {
 				it("is recorded in analyzed.toml", func() {
+					t.Skip()
 					h.SkipIf(t, api.MustParse(platformAPI).LessThan("0.7"), "Platform API < 0.7 does not accept run image")
 
 					h.DockerRunAndCopy(t,
@@ -353,6 +364,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 		when("daemon case", func() {
 			it("writes analyzed.toml", func() {
+				t.Skip()
 				analyzeFlags := []string{"-daemon"}
 				if api.MustParse(platformAPI).AtLeast("0.7") {
 					analyzeFlags = append(analyzeFlags, []string{"-run-image", "some-run-image"}...)

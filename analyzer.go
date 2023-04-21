@@ -301,6 +301,11 @@ func (a *Analyzer) retrieveAppMetadata() (platform.LayersMetadata, string, error
 	if !a.PreviousImage.Valid() {
 		if a.PreviousImage.Found() {
 			im := a.PreviousImage.(*remote.Image)
+			layers, _ := im.UnderlyingImage().Layers()
+			for _, l := range layers {
+				a.Logger.Infof("%v", l)
+
+			}
 			err := validate.Image(im.UnderlyingImage(), validate.Fast)
 			if err != nil {
 				a.Logger.Infof("%v", err)
