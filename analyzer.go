@@ -7,6 +7,8 @@ import (
 
 	"github.com/buildpacks/lifecycle/internal/fsutil"
 
+	"github.com/google/go-containerregistry/pkg/v1/validate"
+
 	"github.com/buildpacks/lifecycle/api"
 	"github.com/buildpacks/lifecycle/buildpack"
 	"github.com/buildpacks/lifecycle/cache"
@@ -14,7 +16,6 @@ import (
 	"github.com/buildpacks/lifecycle/internal/layer"
 	"github.com/buildpacks/lifecycle/log"
 	"github.com/buildpacks/lifecycle/platform"
-	"github.com/google/go-containerregistry/pkg/v1/validate"
 )
 
 type AnalyzerFactory struct {
