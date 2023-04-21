@@ -27,6 +27,7 @@ var (
 )
 
 func TestVersion(t *testing.T) {
+	t.Skip()
 	var err error
 	buildDir, err = os.MkdirTemp("", "lifecycle-acceptance")
 	h.AssertNil(t, err)

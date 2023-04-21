@@ -822,6 +822,8 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 
 					when("the destination image exists", func() {
 						it("writes analyzed.toml with previous image identifier", func() {
+							// this is the test that fails
+
 							analyzeFlags := []string{"-previous-image", analyzeRegFixtures.ReadWriteAppImage}
 							if api.MustParse(platformAPI).AtLeast("0.7") {
 								analyzeFlags = append(analyzeFlags, []string{"-run-image", analyzeRegFixtures.ReadOnlyRunImage}...)
@@ -831,7 +833,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 							execArgs = append([]string{ctrPath(analyzerPath)}, analyzeFlags...)
 							execArgs = append(execArgs, analyzeRegFixtures.ReadWriteOtherAppImage)
 
-							h.DockerRunAndCopy(t,
+							out := h.DockerRunAndCopy(t,
 								containerName,
 								copyDir,
 								ctrPath("/layers/analyzed.toml"),
@@ -843,6 +845,7 @@ func testAnalyzerFunc(platformAPI string) func(t *testing.T, when spec.G, it spe
 								),
 								h.WithArgs(execArgs...),
 							)
+							fmt.Println(out)
 
 							analyzedMD := assertAnalyzedMetadata(t, filepath.Join(copyDir, "analyzed.toml"))
 							h.AssertStringContains(t, analyzedMD.PreviousImageRef(), analyzeRegFixtures.ReadWriteAppImage)
