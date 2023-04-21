@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"github.com/buildpacks/imgutil"
+	"github.com/buildpacks/imgutil/remote"
 	"github.com/pkg/errors"
 
 	"github.com/buildpacks/lifecycle/internal/fsutil"
@@ -296,6 +297,15 @@ func (a *Analyzer) retrieveAppMetadata() (platform.LayersMetadata, string, error
 		return platform.LayersMetadata{}, "", errors.Wrap(err, "identifying previous image")
 	}
 	if !a.PreviousImage.Valid() {
+		if a.PreviousImage.Found() {
+			im := a.PreviousImage.(*remote.Image)
+
+			m, _ := im.UnderlyingImage().Manifest()
+			if err != nil {
+				return platform.LayersMetadata{}, "", err
+			}
+			a.Logger.Infof("%v", m)
+		}
 		a.Logger.Infof("Ignoring image %q because it was corrupt", a.PreviousImage.Name())
 		return platform.LayersMetadata{}, "", nil
 	}
